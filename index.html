@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stórico - Aprenda História em 5 minutos por dia</title>
+    <meta name="description" content="Receba aulas de História narradas direto no WhatsApp. 5 minutos por dia, sem app, sem compromisso.">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #0a1a14;
+            color: white;
+            line-height: 1.6;
+        }
+        
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            background-color: rgba(10, 26, 20, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #34d399, #10b981);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .logo-text {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .cta-button {
+            background-color: #10b981;
+            color: black;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .cta-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+        }
+        
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 100px 24px 60px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-bg {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 50%;
+            filter: blur(100px);
+        }
+        
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background-color: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 50px;
+            padding: 8px 16px;
+            margin-bottom: 32px;
+            font-size: 14px;
+            color: #d1d5db;
+        }
+        
+        .hero h1 {
+            font-size: clamp(32px, 6vw, 56px);
+            font-weight: bold;
+            margin-bottom: 24px;
+            line-height: 1.2;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(90deg, #34d399, #6ee7b7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero p {
+            font-size: 18px;
+            color: #9ca3af;
+            margin-bottom: 40px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .hero-cta {
+            background-color: #10b981;
+            color: black;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 16px 32px;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 20px 40px rgba(16, 185, 129, 0.25);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .hero-cta:hover {
+            transform: scale(1.05);
+        }
+        
+        .hero-note {
+            margin-top: 24px;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        /* Phone Mockup */
+        .phone-mockup {
+            margin-top: 64px;
+        }
+        
+        .phone-container {
+            background: #000;
+            border-radius: 40px;
+            padding: 12px;
+            max-width: 340px;
+            margin: 0 auto;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+        }
+        
+        .phone-screen {
+            background: #0a1412;
+            border-radius: 32px;
+            overflow: hidden;
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 96px 24px;
+        }
+        
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section-header {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+        
+        .section-header h2 {
+            font-size: clamp(28px, 4vw, 40px);
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+        
+        .section-header p {
+            font-size: 18px;
+            color: #9ca3af;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 32px;
+        }
+        
+        .feature-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 32px;
+        }
+        
+        .feature-step {
+            color: #34d399;
+            font-family: monospace;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background-color: rgba(16, 185, 129, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #34d399;
+            margin-bottom: 16px;
+        }
+        
+        .feature-card h3 {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .feature-card p {
+            color: #9ca3af;
+            margin: 0;
+        }
+        
+        /* CTA Section */
+        .cta-section {
+            padding: 96px 24px;
+        }
+        
+        .cta-container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .cta-box {
+            background: linear-gradient(180deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 24px;
+            padding: 48px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta-box h2 {
+            font-size: clamp(28px, 4vw, 40px);
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+        
+        .cta-box p {
+            color: #9ca3af;
+            font-size: 18px;
+            margin-bottom: 32px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .cta-box .hero-cta {
+            padding: 20px 40px;
+        }
+        
+        /* Footer */
+        footer {
+            padding: 48px 24px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .footer-logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #34d399, #10b981);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .footer-copyright {
+            font-size: 14px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <div class="logo-icon">S</div>
+                <span class="logo-text">Stórico</span>
+            </div>
+            <a href="quiz.html" class="cta-button">Começar</a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <div class="badge">
+                <span>💬</span>
+                <span>100% no WhatsApp</span>
+            </div>
+            
+            <h1>
+                Aprenda História em 
+                <span class="gradient-text">5 minutos por dia</span>, 
+                direto no WhatsApp.
+            </h1>
+            
+            <p>
+                Receba aulas narradas, curtas e envolventes no horário que você escolher. 
+                Sem app, sem compromisso, só conhecimento que cabe na sua rotina.
+            </p>
+            
+            <a href="quiz.html" class="hero-cta">
+                Montar minha trilha
+                <span>→</span>
+            </a>
+            
+            <p class="hero-note">
+                Gratuito para começar • Cancele quando quiser
+            </p>
+            
+            <!-- Phone Mockup Simplificado -->
+            <div class="phone-mockup">
+                <div class="phone-container">
+                    <div class="phone-screen">
+                        <div style="padding: 20px; text-align: center; min-height: 500px; background: linear-gradient(180deg, #128C7E, #0d1f1a); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                            <div style="font-size: 64px; margin-bottom: 20px;">🏛️</div>
+                            <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">Stórico</div>
+                            <div style="font-size: 14px; color: rgba(255,255,255,0.8); margin-bottom: 30px;">Sua aula diária de História</div>
+                            <div style="background: rgba(0,0,0,0.3); padding: 15px 20px; border-radius: 12px; margin-bottom: 15px; width: 80%;">
+                                <div style="font-size: 16px; margin-bottom: 5px;">📜 Missão do Dia</div>
+                                <div style="font-size: 13px; color: rgba(255,255,255,0.7);">A Queda do Império Romano</div>
+                            </div>
+                            <div style="background: rgba(52, 211, 153, 0.2); border: 1px solid rgba(52, 211, 153, 0.5); padding: 12px 20px; border-radius: 12px; width: 80%;">
+                                <div style="font-size: 14px;">▶️ Áudio: 4:32</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="features-container">
+            <div class="section-header">
+                <h2>Simples assim.</h2>
+                <p>Três passos para começar a aprender</p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-step">01</div>
+                    <div class="feature-icon">✓</div>
+                    <h3>Escolha seu tema</h3>
+                    <p>Roma, Idade Média, Guerras, Brasil... você decide o que quer aprender.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-step">02</div>
+                    <div class="feature-icon">💬</div>
+                    <h3>Receba no WhatsApp</h3>
+                    <p>Todo dia, no horário que você escolher, uma aula narrada chega pra você.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-step">03</div>
+                    <div class="feature-icon">⏱️</div>
+                    <h3>Complete a missão</h3>
+                    <p>Ouça, veja as imagens, responda o quiz. Missão cumprida em poucos minutos.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Final -->
+    <section class="cta-section">
+        <div class="cta-container">
+            <div class="cta-box">
+                <h2>Sua primeira aula está a um clique.</h2>
+                <p>
+                    Monte sua trilha personalizada e comece a aprender História 
+                    de um jeito que cabe na sua rotina.
+                </p>
+                <a href="quiz.html" class="hero-cta">
+                    Montar minha trilha
+                    <span>→</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <div class="footer-logo">
+                <div class="footer-logo-icon">S</div>
+                <span style="font-weight: bold;">Stórico</span>
+            </div>
+            <div class="footer-copyright">
+                © 2025 Stórico. Todos os direitos reservados.
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
