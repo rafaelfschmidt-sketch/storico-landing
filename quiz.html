@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz - Stórico</title>
+    <meta name="description" content="Personalize sua jornada de aprendizado em História">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(to bottom right, #F5F1E8, #FAF8F3, #F0EBE0);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 640px;
+            width: 100%;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            overflow: hidden;
+            border: 1px solid rgba(45, 95, 79, 0.1);
+        }
+        
+        .header {
+            background: #2D5F4F;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .back-button {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background 0.3s;
+        }
+        
+        .back-button:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .progress-bar {
+            flex: 1;
+            margin: 0 16px;
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: white;
+            transition: width 0.3s ease;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .content {
+            padding: 48px;
+        }
+        
+        .question-number {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2D5F4F;
+            margin-bottom: 8px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            font-weight: bold;
+            color: #111;
+            margin-bottom: 32px;
+            line-height: 1.3;
+        }
+        
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .option {
+            width: 100%;
+            padding: 20px;
+            border-radius: 16px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            text-align: left;
+            font-size: 18px;
+            font-weight: 500;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .option:hover {
+            border-color: rgba(45, 95, 79, 0.5);
+            background: #f9fafb;
+        }
+        
+        .option.selected {
+            border-color: #2D5F4F;
+            background: rgba(45, 95, 79, 0.05);
+            color: #2D5F4F;
+            box-shadow: 0 4px 12px rgba(45, 95, 79, 0.15);
+        }
+        
+        .option-emoji {
+            font-size: 32px;
+        }
+        
+        .form-group {
+            margin-bottom: 24px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #2D5F4F;
+            box-shadow: 0 0 0 3px rgba(45, 95, 79, 0.1);
+        }
+        
+        .button {
+            width: 100%;
+            background: #2D5F4F;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+            padding: 20px 32px;
+            border-radius: 16px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 32px;
+        }
+        
+        .button:hover {
+            background: #234A3D;
+            transform: scale(1.02);
+        }
+        
+        .button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+        
+        .hero-content {
+            text-align: center;
+            padding: 48px;
+        }
+        
+        .hero-logo {
+            margin-bottom: 32px;
+        }
+        
+        .hero-icons {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin: 48px 0;
+        }
+        
+        .hero-icon {
+            width: 112px;
+            height: 112px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .hero-icon:hover {
+            transform: scale(1.1);
+        }
+        
+        .note {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 24px;
+        }
+
+        @media (max-width: 640px) {
+            .content {
+                padding: 32px 24px;
+            }
+            
+            h1 {
+                font-size: 28px;
+            }
+            
+            .option {
+                font-size: 16px;
+                padding: 16px;
+            }
+            
+            .hero-icons {
+                gap: 16px;
+            }
+            
+            .hero-icon {
+                width: 88px;
+                height: 88px;
+                font-size: 48px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="app">
+        <!-- Content will be dynamically inserted here -->
+    </div>
+
+    <script>
+        // Quiz state
+        let currentStep = 0;
+        let quizData = {
+            learningGoal: '',
+            historicalPeriod: '',
+            timeOfDay: '',
+            ageRange: '',
+            name: '',
+            email: '',
+            whatsapp: ''
+        };
+
+        // Render functions
+        function renderHero() {
+            return `
+                <div class="hero-content">
+                    <div class="hero-logo">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: 0 auto 16px; display: block;">
+                            <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" fill="#2D5F4F"/>
+                            <path d="M12 6V18M9 9H15M9 12H15M9 15H15" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        <div style="font-size: 28px; font-weight: bold; color: #2D5F4F;">Stórico</div>
+                    </div>
+                    
+                    <h1 style="font-size: 40px; margin-bottom: 16px;">Personalize sua jornada de aprendizado</h1>
+                    
+                    <p style="font-size: 18px; color: #6b7280; margin-bottom: 48px; max-width: 500px; margin-left: auto; margin-right: auto;">
+                        Responda 4 perguntas rápidas para customizarmos sua experiência no Stórico
+                    </p>
+                    
+                    <div class="hero-icons">
+                        <div class="hero-icon" style="background: linear-gradient(to bottom right, rgba(45, 95, 79, 0.1), rgba(45, 95, 79, 0.2));">🏛️</div>
+                        <div class="hero-icon" style="background: linear-gradient(to bottom right, rgba(139, 115, 85, 0.1), rgba(139, 115, 85, 0.2));">📚</div>
+                        <div class="hero-icon" style="background: linear-gradient(to bottom right, rgba(45, 95, 79, 0.1), rgba(45, 95, 79, 0.2));">⏳</div>
+                    </div>
+                    
+                    <button class="button" onclick="nextStep()">Começar Quiz</button>
+                    
+                    <p class="note">Leva apenas 1 minuto ⏱️</p>
+                </div>
+            `;
+        }
+
+        function renderQuestion1() {
+            const options = [
+                { label: 'Desenvolver pensamento crítico', emoji: '🧠' },
+                { label: 'Entender o passado', emoji: '🔮' },
+                { label: 'Fazer melhor uso do meu tempo livre', emoji: '⏰' },
+                { label: 'Me tornar a pessoa mais interessante da sala', emoji: '🎭' },
+                { label: 'Treinar a mente', emoji: '💪' }
+            ];
+
+            return `
+                ${renderHeader(1)}
+                <div class="content">
+                    <div class="question-number">PERGUNTA 1 DE 4</div>
+                    <h1>Qual é sua meta de aprendizado?</h1>
+                    <div class="options">
+                        ${options.map(opt => `
+                            <button class="option ${quizData.learningGoal === opt.label ? 'selected' : ''}" 
+                                    onclick="selectOption('learningGoal', \`${opt.label}\`)">
+                                <span class="option-emoji">${opt.emoji}</span>
+                                ${opt.label}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderQuestion2() {
+            const options = [
+                { label: 'Egito Antigo', emoji: '🐫' },
+                { label: 'Império Romano', emoji: '🏛️' },
+                { label: 'Idade Média', emoji: '⚔️' },
+                { label: 'Brasil Colônia', emoji: '🇧🇷' },
+                { label: 'Segunda Guerra Mundial', emoji: '✈️' }
+            ];
+
+            return `
+                ${renderHeader(2)}
+                <div class="content">
+                    <div class="question-number">PERGUNTA 2 DE 4</div>
+                    <h1>Qual período histórico você quer explorar primeiro?</h1>
+                    <div class="options">
+                        ${options.map(opt => `
+                            <button class="option ${quizData.historicalPeriod === opt.label ? 'selected' : ''}" 
+                                    onclick="selectOption('historicalPeriod', \`${opt.label}\`)">
+                                <span class="option-emoji">${opt.emoji}</span>
+                                ${opt.label}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderQuestion3() {
+            const options = [
+                { label: 'Pela manhã (ao acordar)', emoji: '🌅' },
+                { label: 'Na hora do almoço', emoji: '☀️' },
+                { label: 'À noite (antes de dormir)', emoji: '🌙' }
+            ];
+
+            return `
+                ${renderHeader(3)}
+                <div class="content">
+                    <div class="question-number">PERGUNTA 3 DE 4</div>
+                    <h1>Em que momento do dia você quer mergulhar na história?</h1>
+                    <div class="options">
+                        ${options.map(opt => `
+                            <button class="option ${quizData.timeOfDay === opt.label ? 'selected' : ''}" 
+                                    onclick="selectOption('timeOfDay', \`${opt.label}\`)">
+                                <span class="option-emoji">${opt.emoji}</span>
+                                ${opt.label}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderQuestion4() {
+            const options = [
+                { label: 'Menos de 18', emoji: '👶' },
+                { label: '18-24', emoji: '🎓' },
+                { label: '25-34', emoji: '💼' },
+                { label: '35-44', emoji: '👔' },
+                { label: '45+', emoji: '👨‍🦳' }
+            ];
+
+            return `
+                ${renderHeader(4)}
+                <div class="content">
+                    <div class="question-number">PERGUNTA 4 DE 4</div>
+                    <h1>Em qual faixa etária você se encaixa?</h1>
+                    <div class="options">
+                        ${options.map(opt => `
+                            <button class="option ${quizData.ageRange === opt.label ? 'selected' : ''}" 
+                                    onclick="selectOption('ageRange', \`${opt.label}\`)">
+                                <span class="option-emoji">${opt.emoji}</span>
+                                ${opt.label}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFinalForm() {
+            return `
+                ${renderHeader(5)}
+                <div class="content">
+                    <div class="question-number">ÚLTIMO PASSO</div>
+                    <h1>Último passo para começar sua jornada</h1>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Nome</label>
+                        <input 
+                            type="text" 
+                            class="form-input" 
+                            placeholder="Seu primeiro nome"
+                            value="${quizData.name}"
+                            onchange="updateFormField('name', this.value)"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">E-mail</label>
+                        <input 
+                            type="email" 
+                            class="form-input" 
+                            placeholder="seu@email.com"
+                            value="${quizData.email}"
+                            onchange="updateFormField('email', this.value)"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">WhatsApp</label>
+                        <input 
+                            type="tel" 
+                            class="form-input" 
+                            placeholder="(DDD) 9XXXX-XXXX"
+                            value="${quizData.whatsapp}"
+                            onchange="updateFormField('whatsapp', this.value)"
+                            oninput="formatWhatsApp(this)"
+                        >
+                    </div>
+                    
+                    <button 
+                        class="button" 
+                        onclick="submitQuiz()"
+                        ${!canSubmit() ? 'disabled' : ''}
+                    >
+                        Começar minha jornada
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderHeader(step) {
+            const progress = (step / 5) * 100;
+            return `
+                <div class="header">
+                    <button class="back-button" onclick="previousStep()">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progress}%"></div>
+                    </div>
+                    <div class="logo">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" fill="white"/>
+                            <path d="M12 6V18M9 9H15M9 12H15M9 15H15" stroke="#2D5F4F" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        <span>Stórico</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Navigation functions
+        function nextStep() {
+            if (currentStep < 5) {
+                currentStep++;
+                render();
+            }
+        }
+
+        function previousStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                render();
+            }
+        }
+
+        function selectOption(field, value) {
+            quizData[field] = value;
+            setTimeout(() => {
+                nextStep();
+            }, 300);
+        }
+
+        function updateFormField(field, value) {
+            quizData[field] = value;
+            render();
+        }
+
+        function formatWhatsApp(input) {
+            let value = input.value.replace(/\D/g, '');
+            
+            if (value.length <= 2) {
+                input.value = value.length === 2 ? `(${value})` : value;
+            } else if (value.length <= 7) {
+                input.value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+            } else if (value.length <= 11) {
+                input.value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+            } else {
+                input.value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7, 11)}`;
+            }
+            
+            quizData.whatsapp = input.value;
+        }
+
+        function canSubmit() {
+            return quizData.name.trim() !== '' && 
+                   quizData.email.trim() !== '' && 
+                   quizData.whatsapp.trim() !== '';
+        }
+
+        function submitQuiz() {
+            if (!canSubmit()) return;
+            
+            // Preparar mensagem para WhatsApp
+            const whatsappNumber = '5531982829446'; // Número do Stórico
+            const message = encodeURIComponent(
+`Olá! 👋
+Quero começar meu teste grátis de 7 dias no Stórico.
+
+Tema escolhido: ${quizData.historicalPeriod}
+Momento do dia: ${quizData.timeOfDay}`
+            );
+            
+            // Redirecionar para WhatsApp
+            window.location.href = `https://wa.me/${whatsappNumber}?text=${message}`;
+        }
+
+        // Render function
+        function render() {
+            const app = document.getElementById('app');
+            
+            switch(currentStep) {
+                case 0:
+                    app.innerHTML = renderHero();
+                    break;
+                case 1:
+                    app.innerHTML = renderQuestion1();
+                    break;
+                case 2:
+                    app.innerHTML = renderQuestion2();
+                    break;
+                case 3:
+                    app.innerHTML = renderQuestion3();
+                    break;
+                case 4:
+                    app.innerHTML = renderQuestion4();
+                    break;
+                case 5:
+                    app.innerHTML = renderFinalForm();
+                    break;
+            }
+        }
+
+        // Initialize
+        render();
+    </script>
+</body>
+</html>
