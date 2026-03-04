@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0">
+    <title>Quiz - Stórico</title>
+    <meta name="description" content="Personalize sua jornada de aprendizado em História">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@500;600&display=swap" rel="stylesheet">
+
+    <!-- Supabase Client - Versão específica -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #080f0b;
+            color: #eef2ef;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 640px;
+            width: 100%;
+            background: rgba(255,255,255,0.04);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        
+        .header {
+            background: #1a7a4e;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .back-button {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background 0.3s;
+        }
+        
+        .back-button:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .progress-bar {
+            flex: 1;
+            margin: 0 16px;
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: white;
+            transition: width 0.3s ease;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .content {
+            padding: 48px;
+        }
+        
+        .question-number {
+            font-size: 14px;
+            font-weight: 600;
+            color: #34d399;
+            margin-bottom: 8px;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: bold;
+            color: #eef2ef;
+            margin-bottom: 32px;
+            line-height: 1.3;
+        }
+        
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .option {
+            width: 100%;
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+            text-align: left;
+            font-size: 18px;
+            font-weight: 500;
+            color: #eef2ef;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .option:hover {
+            border-color: rgba(52,211,153,0.3);
+            background: rgba(255,255,255,0.08);
+        }
+
+        .option.selected {
+            border-color: #34d399;
+            background: rgba(26,122,78,0.15);
+            color: #34d399;
+            box-shadow: 0 4px 12px rgba(26,122,78,0.25);
+        }
+        
+        .option-emoji {
+            font-size: 32px;
+        }
+        
+        .form-group {
+            margin-bottom: 24px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #7a9485;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            color: #eef2ef;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s;
+        }
+
+        .form-input::placeholder {
+            color: #4a6455;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #34d399;
+            box-shadow: 0 0 0 3px rgba(52,211,153,0.15);
+        }
+        
+        .button {
+            width: 100%;
+            background: #1a7a4e;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+            font-family: 'Inter', sans-serif;
+            padding: 20px 32px;
+            border-radius: 100px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 32px;
+            box-shadow: 0 12px 36px rgba(26,122,78,0.28);
+        }
+
+        .button:hover:not(:disabled) {
+            background: #22a062;
+            transform: translateY(-1px);
+            box-shadow: 0 16px 48px rgba(26,122,78,0.42);
+        }
+
+        .button:disabled {
+            background: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.3);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .button.loading {
+            position: relative;
+            color: transparent;
+        }
+        
+        .button.loading::after {
+            content: "";
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin-left: -10px;
+            margin-top: -10px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            background: rgba(220,38,38,0.15);
+            border: 1px solid rgba(220,38,38,0.3);
+            color: #fca5a5;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+            font-size: 14px;
+        }
+        
+        .hero-content {
+            text-align: center;
+            padding: 48px;
+        }
+        
+        .hero-logo {
+            margin-bottom: 32px;
+        }
+        
+        .hero-icons {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin: 48px 0;
+        }
+        
+        .hero-icon {
+            width: 112px;
+            height: 112px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .hero-icon:hover {
+            transform: scale(1.1);
+        }
+        
+        .note {
+            font-size: 14px;
+            color: #7a9485;
+            margin-top: 12px;
+        }
+
+        @media (max-width: 640px) {
+            .content {
+                padding: 32px 24px;
+            }
+            
+            h1 {
+                font-size: 28px;
+            }
+            
+            .option {
+                font-size: 16px;
+                padding: 16px;
+            }
+            
+            .hero-icons {
+                gap: 16px;
+            }
+            
+            .hero-icon {
+                width: 88px;
+                height: 88px;
+                font-size: 48px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="app">
+        <!-- Content will be dynamically inserted here -->
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const { createClient } = supabase;
+        const supabaseUrl = 'https://vhsqdlivictwrtebevwc.supabase.co';
+        const supabaseKey = 'sb_publishable_ivPPDyDpcwjOK9c8tN3_uQ_-4I_OtmY';
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+        // Quiz state
+        let currentStep = 0;
+        let quizData = {
+            historicalPeriod: '',
+            timeOfDay: '',
+            ageRange: '',
+            name: '',
+            email: '',
+            whatsapp: ''
+        };
+        
+        let isSubmitting = false;
+
+        // Render functions
+        function renderHero() {
+            return `
+                <div class="hero-content">
+                    <div class="hero-logo" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:0;">
+                        <img src="logo.png" style="width:72px;height:72px;object-fit:contain;" alt="Stórico logo">
+                        <span style="font-size:28px;font-weight:600;color:#eef2ef;font-family:'Outfit',sans-serif;margin-left:-20px;">Stórico</span>
+                    </div>
+                    <p style="font-size:14px;color:#7a9485;margin-bottom:24px;margin-top:-2px;font-family:'Inter',sans-serif;">Pessoas inteligentes entendem de história</p>
+
+                    <h1 style="font-size: 28px; margin-bottom: 16px; font-family:'Inter',sans-serif;">Personalize sua jornada de aprendizado</h1>
+
+                    <button class="button" onclick="nextStep()">Começar</button>
+
+                    <p class="note">Leva apenas 1 minuto ⏱️</p>
+                </div>
+            `;
+        }
+
+        function renderQuestion1() {
+            const options = [
+                { label: 'Egito Antigo', emoji: '🐫' },
+                { label: 'Império Romano', emoji: '🏛️' },
+                { label: 'Idade Média', emoji: '⚔️' },
+                { label: 'Brasil Colônia', emoji: '🇧🇷' },
+                { label: 'Segunda Guerra Mundial', emoji: '✈️' }
+            ];
+
+            return `
+                ${renderHeader(1)}
+                <div class="content">
+                    <div class="question-number">PERGUNTA 1 DE 3</div>
+                    <h1>Qual período histórico você quer explorar primeiro?</h1>
+                    <div class="options">
+                        ${options.map(opt => `
+                            <button class="option ${quizData.historicalPeriod === opt.label ? 'selected' : ''}" 
+                                    onclick="selectOption('historicalPeriod', \`${opt.label}\`)">
+                                <span class="option-emoji">${opt.emoji}</span>
+                                ${opt.label}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderQuestion2() {
+            const options = [
+                { label: 'Pela manhã', emoji: '🌅' },
+                { label: 'Na hora do almoço', emoji: '☀️' },
+                { label: 'À noite', emoji: '🌙' }
+            ];
+
+            return `
+                ${renderHeader(2)}
+                <div class="content">
+                    <div class="question-number">PERGUNTA 2 DE 3</div>
+                    <h1>Em que momento do dia você quer mergulhar na história?</h1>
+                    <div class="options">
+                        ${options.map(opt => `
+                            <button class="option ${quizData.timeOfDay === opt.label ? 'selected' : ''}" 
+                                    onclick="selectOption('timeOfDay', \`${opt.label}\`)">
+                                <span class="option-emoji">${opt.emoji}</span>
+                                ${opt.label}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderQuestion3() {
+            const options = [
+                { label: '18-24', emoji: '' },
+                { label: '25-34', emoji: '' },
+                { label: '35-44', emoji: '' },
+                { label: '45-54', emoji: '' },
+                { label: '55+', emoji: '' }
+            ];
+
+            return `
+                ${renderHeader(3)}
+                <div class="content">
+                    <div class="question-number">PERGUNTA 3 DE 3</div>
+                    <h1>Em qual faixa etária você se encaixa?</h1>
+                    <div class="options">
+                        ${options.map(opt => `
+                            <button class="option ${quizData.ageRange === opt.label ? 'selected' : ''}" 
+                                    onclick="selectOption('ageRange', \`${opt.label}\`)">
+                                <span class="option-emoji">${opt.emoji}</span>
+                                ${opt.label}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFinalForm() {
+            return `
+                ${renderHeader(4)}
+                <div class="content">
+                    <div class="question-number">ÚLTIMO PASSO</div>
+                    <h1>Último passo para começar sua jornada</h1>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Nome</label>
+                        <input 
+                            type="text" 
+                            class="form-input" 
+                            placeholder="Seu primeiro nome"
+                            value="${quizData.name}"
+                            onchange="updateFormField('name', this.value)"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">E-mail</label>
+                        <input 
+                            type="email" 
+                            class="form-input" 
+                            placeholder="seu@email.com"
+                            value="${quizData.email}"
+                            onchange="updateFormField('email', this.value)"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">WhatsApp</label>
+                        <input 
+                            type="tel" 
+                            class="form-input" 
+                            placeholder="(DDD) 9XXXX-XXXX"
+                            value="${quizData.whatsapp}"
+                            onchange="updateFormField('whatsapp', this.value)"
+                            oninput="formatWhatsApp(this)"
+                        >
+                    </div>
+                    
+                    <button 
+                        class="button ${isSubmitting ? 'loading' : ''}" 
+                        onclick="submitQuiz()"
+                        ${!canSubmit() || isSubmitting ? 'disabled' : ''}
+                    >
+                        ${isSubmitting ? '' : 'Começar minha jornada'}
+                    </button>
+                    
+                    <div id="error-container"></div>
+                </div>
+            `;
+        }
+
+        function renderHeader(step) {
+            const progress = (step / 4) * 100;
+            return `
+                <div class="header">
+                    <button class="back-button" onclick="previousStep()">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progress}%"></div>
+                    </div>
+                    <div class="logo">
+                        <img src="logo.png" style="width:60px;height:60px;object-fit:contain;" alt="Stórico logo">
+                        <span style="font-family:'Outfit',sans-serif;font-weight:600;font-size:20px;margin-left:-20px;">Stórico</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Navigation functions
+        function nextStep() {
+            if (currentStep < 4) {
+                currentStep++;
+                render();
+            }
+        }
+
+        function previousStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                render();
+            }
+        }
+
+        function selectOption(field, value) {
+            quizData[field] = value;
+            setTimeout(() => {
+                nextStep();
+            }, 300);
+        }
+
+        function updateFormField(field, value) {
+            quizData[field] = value;
+            render();
+        }
+
+        function formatWhatsApp(input) {
+            let value = input.value.replace(/\D/g, '');
+            
+            if (value.length <= 2) {
+                input.value = value.length === 2 ? `(${value})` : value;
+            } else if (value.length <= 7) {
+                input.value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+            } else if (value.length <= 11) {
+                input.value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+            } else {
+                input.value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7, 11)}`;
+            }
+            
+            quizData.whatsapp = input.value;
+        }
+
+        function canSubmit() {
+            return quizData.name.trim() !== '' && 
+                   quizData.email.trim() !== '' && 
+                   quizData.whatsapp.trim() !== '';
+        }
+
+        function showError(message) {
+            const errorContainer = document.getElementById('error-container');
+            if (errorContainer) {
+                errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+            }
+        }
+
+        function clearError() {
+            const errorContainer = document.getElementById('error-container');
+            if (errorContainer) {
+                errorContainer.innerHTML = '';
+            }
+        }
+
+        async function submitQuiz() {
+            if (!canSubmit() || isSubmitting) return;
+            
+            isSubmitting = true;
+            clearError();
+            render();
+            
+            try {
+                console.log('🚀 Iniciando salvamento...');
+                
+                // Formatar telefone para apenas números
+                const telefoneNumeros = quizData.whatsapp.replace(/\D/g, '');
+                
+                // Preparar dados
+                const dadosUsuario = {
+                    nome: quizData.name,
+                    email: quizData.email,
+                    telefone: telefoneNumeros,
+                    tema_escolhido: quizData.historicalPeriod,
+                    momento_dia: quizData.timeOfDay,
+                    faixa_etaria: quizData.ageRange,
+                    plano: 'trial'
+                };
+                
+                console.log('📦 Dados a enviar:', dadosUsuario);
+                
+                // Salvar no Supabase
+                const { data, error } = await supabaseClient
+                    .from('usuarios')
+                    .insert([dadosUsuario])
+                    .select();
+                
+                if (error) {
+                    console.error('❌ Erro do Supabase:', error);
+                    console.error('❌ Detalhes:', error.message, error.details, error.hint);
+                    throw error;
+                }
+                
+                console.log('✅ Usuário salvo com sucesso:', data);
+                
+                // Preparar mensagem para WhatsApp
+                const whatsappNumber = '5531982829446';
+                const message = encodeURIComponent(
+`Olá! 👋
+Quero começar meu teste grátis de 7 dias no Stórico.
+
+Tema escolhido: ${quizData.historicalPeriod}
+Momento do dia: ${quizData.timeOfDay}`
+                );
+                
+                console.log('📱 Redirecionando para WhatsApp...');
+                
+                // Redirecionar para WhatsApp
+                window.location.href = `https://wa.me/${whatsappNumber}?text=${message}`;
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar usuário:', error);
+                isSubmitting = false;
+                
+                // Mensagem mais detalhada
+                let errorMsg = 'Ocorreu um erro ao processar seus dados.';
+                if (error.message) {
+                    errorMsg += ` Detalhes: ${error.message}`;
+                }
+                
+                showError(errorMsg);
+                render();
+            }
+        }
+
+        // Render function
+        function render() {
+            const app = document.getElementById('app');
+            
+            switch(currentStep) {
+                case 0:
+                    app.innerHTML = renderHero();
+                    break;
+                case 1:
+                    app.innerHTML = renderQuestion1();
+                    break;
+                case 2:
+                    app.innerHTML = renderQuestion2();
+                    break;
+                case 3:
+                    app.innerHTML = renderQuestion3();
+                    break;
+                case 4:
+                    app.innerHTML = renderFinalForm();
+                    break;
+            }
+        }
+
+        // Initialize
+        render();
+    </script>
+</body>
+</html>
