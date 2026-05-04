@@ -1,0 +1,3827 @@
+{
+  "name": "Stórico - Onboarding (Meta API)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "52d79ff3-103b-45ea-ac98-d10039d69c98",
+      "name": "Webhook - Mensagem Recebida",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        360304,
+        184576
+      ],
+      "webhookId": "whatsapp"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {}
+      },
+      "id": "329d27a6-cf2d-4935-84eb-93d869b42a84",
+      "name": "Resposta Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        360512,
+        184480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\nconst entry = body?.entry?.[0];\nconst entryId = entry?.id || '';\nconst origemInterna = entryId === 'STORICO_INTERNAL';\nconst change = entry?.changes?.[0];\nconst value = change?.value;\n\nif (!value?.messages || value.messages.length === 0) {\n  return { json: { telefone: null, ignorar: true } };\n}\n\nconst msg = value.messages[0];\n\nconst telefoneCompleto = msg.from;\nif (!telefoneCompleto) {\n  return { json: { telefone: null, ignorar: true } };\n}\n\nlet telefoneParaBusca = telefoneCompleto;\n// Remove + se presente antes de normalizar\nconst telefoneSemPlus = telefoneCompleto.startsWith('+') ? telefoneCompleto.substring(1) : telefoneCompleto;\nif (telefoneSemPlus.startsWith('55')) {\n  const semCodPais = telefoneSemPlus.substring(2);\n  const ddd = semCodPais.substring(0, 2);\n  const numero = semCodPais.substring(2);\n  if (numero.length === 8) {\n    telefoneParaBusca = ddd + '9' + numero;\n  } else {\n    telefoneParaBusca = semCodPais;\n  }\n}\n\nlet mensagemTexto = '';\nlet tipoMensagem = msg.type;\nlet buttonReplyId = null;\nlet listReplyId = null;\n\nif (msg.type === 'text') {\n  mensagemTexto = msg.text?.body?.trim().toUpperCase() || '';\n} else if (msg.type === 'interactive') {\n  const buttonReply = msg.interactive?.button_reply;\n  const listReply = msg.interactive?.list_reply;\n  if (buttonReply) {\n    buttonReplyId = buttonReply.id;\n    if (buttonReplyId.startsWith('quiz_') && buttonReplyId !== 'quiz_trigger') {\n      mensagemTexto = buttonReplyId.replace('quiz_', '');\n    }\n  } else if (listReply) {\n    listReplyId = listReply.id;\n  }\n} else if (msg.type === 'button') {\n  // Resposta de botão de template da Meta\n  // O único template com botão no Stórico é o 'welcome' (Acessar Aula)\n  // que sempre deve iniciar a aula — payload pode vir vazio nesse caso\n  const payload = msg.button?.payload || '';\n  buttonReplyId = payload || 'quiz_trigger_onboarding';\n}\n\nreturn {\n  json: {\n    telefone: telefoneParaBusca,\n    telefone_original: telefoneCompleto,\n    mensagem_texto: mensagemTexto,\n    tipo_mensagem: tipoMensagem,\n    button_reply_id: buttonReplyId,\n    list_reply_id: listReplyId,\n    ignorar: false,\n    origem_interna: origemInterna\n  }\n};"
+      },
+      "id": "4fdfbcd6-ff6d-4c55-b979-360bfb95953a",
+      "name": "Extrair Dados da Mensagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360704,
+        184576
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.ignorar }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "81eff8f7-7d7f-481e-9dd2-cd75e0712638",
+      "name": "Ignorar Mensagem?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        360912,
+        184576
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "usuarios",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "telefone",
+              "keyValue": "={{ $json.telefone }}"
+            }
+          ]
+        }
+      },
+      "id": "b8d51c19-edc5-434b-a1a2-b0dfc6b10ae5",
+      "name": "Buscar Usuário no Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        361152,
+        184592
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "name": "filter.operator.notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6af2d3ec-9a9a-4556-bf6f-5204700e52cd",
+      "name": "Usuário Existe?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        361328,
+        184592
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const usuario = $input.first().json;\nconst dadosMsg = $('Extrair Dados da Mensagem').first().json;\nconst mensagemOriginal = dadosMsg.mensagem_texto;\nconst buttonReplyId = dadosMsg.button_reply_id;\nconst listReplyId = dadosMsg.list_reply_id;\n\nif (!usuario || !usuario.id) {\n  return { json: { usuario_encontrado: false } };\n}\n\nconst status = usuario.status || 'aguardando_primeiro_contato';\n// Verificar se trial expirou pela data (independente do valor salvo no banco)\nconst trialFim = usuario.trial_fim ? new Date(usuario.trial_fim) : null;\nconst agora = new Date();\nconst statusFinal = (status === 'ativo' && usuario.plano !== 'pago' && trialFim && agora > trialFim) ? 'trial_expirado' : status;\nconst nome = usuario.nome ? usuario.nome.split(' ')[0] : 'Usuário';\nconst tema = usuario.tema_escolhido || 'Egito Antigo';\nconst momento = usuario.momento_dia || 'Ao acordar';\nconst telefone = usuario.telefone;\n\nconst horarioMap = {\n  'Ao acordar': '6h',\n  'Na hora do almoço': '12h',\n  'À noite': '19h'\n};\nconst horarioTexto = horarioMap[momento] || '6h';\n\nreturn {\n  json: {\n    usuario_encontrado: true,\n    status: statusFinal,\n    nome,\n    tema,\n    momento,\n    horario_texto: horarioTexto,\n    telefone,\n    usuario_id: usuario.id,\n    aula_atual: usuario.aula_atual || 0,\n    quiz_pendente_aula_id: usuario.quiz_pendente_aula_id || null,\n    streak_atual: usuario.streak_atual || 0,\n    acao_pendente: usuario.acao_pendente || null,\n    mensagem_original: mensagemOriginal,\n    button_reply_id: buttonReplyId,\n    list_reply_id: listReplyId,\n    origem_interna: dadosMsg.origem_interna || false\n  }\n};"
+      },
+      "id": "f448d265-a387-4e3f-af93-4e11b382857d",
+      "name": "Extrair Status do Usuário",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        361504,
+        184384
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "aguardando_primeiro_contato",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b4fcf538-80a8-42e9-8ee8-356c350ee32c",
+      "name": "É Primeira Mensagem?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        361712,
+        184320
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "trial_expirado",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1f7ba1ee-ca45-4c91-9a2e-cb81223b5462",
+      "name": "É Trial Expirado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        361712,
+        184576
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const dados = $input.first().json;\nlet telefone = dados.telefone;\nif (!telefone.startsWith('55')) telefone = '55' + telefone;\nif (!telefone.startsWith('+')) telefone = '+' + telefone;\nreturn { json: { telefone, tema: dados.tema, aula_atual: dados.aula_atual } };"
+      },
+      "id": "dd3e1691-f759-4e22-9c88-a271aa90564f",
+      "name": "Formatar Mensagem Trial Expirado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        362016,
+        184528
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"messaging_product\": \"whatsapp\", \"to\": $('Formatar Mensagem Trial Expirado').first().json.telefone, \"type\": \"interactive\", \"interactive\": { \"type\": \"cta_url\", \"body\": { \"text\": \"Seu período de trial encerrou. 😢\\n\\nMas sua jornada em *\" + $('Formatar Mensagem Trial Expirado').first().json.tema + \"* não precisa parar! Você estava na aula \" + $('Formatar Mensagem Trial Expirado').first().json.aula_atual + \", continue de onde parou.\" }, \"action\": { \"name\": \"cta_url\", \"parameters\": { \"display_text\": \"Mensal R$19,90\", \"url\": \"https://buy.stripe.com/8x2fZi0Ha5ATf4S4xudby00\" } } } }) }}",
+        "options": {}
+      },
+      "id": "0f9f0fc5-c955-4661-96d6-eb4a1f455bd4",
+      "name": "Enviar Mensagem Trial Expirado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        362192,
+        184528
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"messaging_product\": \"whatsapp\", \"to\": $('Formatar Mensagem Trial Expirado').first().json.telefone, \"type\": \"interactive\", \"interactive\": { \"type\": \"cta_url\", \"body\": { \"text\": \"💡 Ou economize com o plano anual:\" }, \"action\": { \"name\": \"cta_url\", \"parameters\": { \"display_text\": \"Anual R$149,90\", \"url\": \"https://buy.stripe.com/28E3cwcpS0gz5ui3tqdby01\" } } } }) }}",
+        "options": {}
+      },
+      "id": "09338943-5797-4787-a7d5-9bdf97729c1d",
+      "name": "Enviar Mensagem Trial Expirado Anual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        362384,
+        184528
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dados = $('Extrair Status do Usuário').first().json;\nlet telefone = dados.telefone;\nif (!telefone.startsWith('55')) telefone = '55' + telefone;\nif (!telefone.startsWith('+')) telefone = '+' + telefone;\n\nconst mensagem1 = `Olá, ${dados.nome}! 👋\n\nSua jornada em *${dados.tema}* começa agora com aulas enviadas *${dados.momento}*, direto no seu WhatsApp.`;\n\nconst mensagem2 = `Todos os dias você vai receber:\n\n🎧 Um áudio narrado\n🖼 Imagens para visualizar o que está sendo contado\n🧠 Um quiz rápido para fixar o conteúdo`;\n\nconst btn3_payload = JSON.stringify({\n  messaging_product: 'whatsapp',\n  to: telefone,\n  type: 'interactive',\n  interactive: {\n    type: 'button',\n    body: { text: 'Sempre que precisar acessar o menu, é só enviar qualquer mensagem para mim. Bora pra sua primeira aula?' },\n    action: {\n      buttons: [\n        { type: 'reply', reply: { id: 'quiz_trigger_onboarding', title: 'Iniciar primeira aula' } }\n      ]\n    }\n  }\n});\nreturn { json: { telefone, mensagem1, mensagem2, btn3_payload, usuario_id: dados.usuario_id } };"
+      },
+      "id": "e75508b3-1835-45ba-b1ed-2fddecadebeb",
+      "name": "Formatar Boas-vindas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        362016,
+        184304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $('Formatar Boas-vindas').first().json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text.body",
+              "value": "={{ $('Formatar Boas-vindas').first().json.mensagem1 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "80aec25b-45e9-458c-a57d-1602d04e5648",
+      "name": "Boas-vindas Msg 1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        362192,
+        184304
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $('Formatar Boas-vindas').first().json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text.body",
+              "value": "={{ $('Formatar Boas-vindas').first().json.mensagem2 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "120fe31e-2253-4524-bca6-e3edde0c0904",
+      "name": "Boas-vindas Msg 2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        362384,
+        184304
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $('Formatar Boas-vindas').first().json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "interactive"
+            },
+            {
+              "name": "interactive.type",
+              "value": "button"
+            },
+            {
+              "name": "interactive.body.text",
+              "value": "Sempre que precisar acessar o menu, é só enviar qualquer mensagem pra mim.\n\n*Bora pra sua primeira aula?*"
+            },
+            {
+              "name": "interactive.action.buttons[0].type",
+              "value": "reply"
+            },
+            {
+              "name": "interactive.action.buttons[0].reply.id",
+              "value": "quiz_trigger_onboarding"
+            },
+            {
+              "name": "interactive.action.buttons[0].reply.title",
+              "value": "Iniciar 1ª aula"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9db76a20-44b7-4619-880b-86bcb5ea9ffc",
+      "name": "Boas-vindas Msg 3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        362576,
+        184304
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Formatar Boas-vindas').first().json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "ativo_onboarding"
+            },
+            {
+              "fieldId": "primeiro_contato_em",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "trial_inicio",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "trial_fim",
+              "fieldValue": "={{ $now.plus(7, 'days').toISO() }}"
+            }
+          ]
+        }
+      },
+      "id": "18f7fabd-3802-4bb2-9eed-58ac159783a8",
+      "name": "Atualizar Status para Ativo Onboarding",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        362784,
+        184304
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dadosWebhook = $('Extrair Dados da Mensagem').first().json;\nlet telefone = dadosWebhook.telefone_original || dadosWebhook.telefone;\nif (telefone && !telefone.startsWith('55')) telefone = '55' + telefone;\nif (telefone && !telefone.startsWith('+')) telefone = '+' + telefone;\nconst mensagem1 = `Olá! 👋\n\nPara começar no Stórico, você precisa se cadastrar primeiro.\n\nAcesse: https://storico.com.br/quiz.html\n\nLá você escolhe seu tema favorito e horário preferido.\n\nAté logo! 🏛️`;\nreturn { json: { telefone, mensagem1, usuario_id: null } };"
+      },
+      "id": "85b26793-66af-4b39-a932-b90fd4d261d4",
+      "name": "Formatar Mensagem - Desconhecido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        361488,
+        184784
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text.body",
+              "value": "={{ $json.mensagem1 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7f3224a6-c740-4c8a-adc2-894041778a5e",
+      "name": "Enviar Mensagem Desconhecido",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        361712,
+        184784
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dados = $('Extrair Status do Usuário').first().json;\nconst msg = dados.mensagem_original || '';\nconst buttonReplyId = dados.button_reply_id || null;\nconst listReplyId = dados.list_reply_id || null;\nconst acaoPendente = dados.acao_pendente || null;\n\nlet rota = 'outro';\n\n// Botões e listas têm prioridade\nif (buttonReplyId === 'quiz_trigger_onboarding' || buttonReplyId === 'Acessar Aula') {\n  rota = 'iniciar_aula';\n} else if (buttonReplyId === 'quiz_trigger' || (buttonReplyId && buttonReplyId.startsWith('quiz_trigger_') && buttonReplyId !== 'quiz_trigger_onboarding')) {\n  rota = 'acessar_quiz';\n} else if (['quiz_A','quiz_B','quiz_C'].includes(buttonReplyId)) {\n  rota = 'resposta_quiz';\n} else if (buttonReplyId === 'horario_manha') {\n  rota = 'confirmar_manha';\n} else if (buttonReplyId === 'horario_almoco') {\n  rota = 'confirmar_almoco';\n} else if (buttonReplyId === 'horario_noite') {\n  rota = 'confirmar_noite';\n} else if (listReplyId === 'menu_como_funciona') {\n  rota = 'como_funciona';\n} else if (listReplyId === 'menu_alterar_horario') {\n  rota = 'mudar_horario';\n} else if (listReplyId === 'menu_alterar_tema') {\n  rota = 'alterar_tema';\n} else if (listReplyId === 'menu_suporte') {\n  rota = 'suporte';\n} else if (listReplyId && listReplyId.startsWith('tema_')) {\n  rota = 'confirmar_tema';\n} else if (acaoPendente === 'mudando_horario') {\n  if (msg === '1') rota = 'confirmar_manha';\n  else if (msg === '2') rota = 'confirmar_almoco';\n  else if (msg === '3') rota = 'confirmar_noite';\n  else rota = 'outro';\n} else {\n  if (['A','B','C'].includes(msg)) rota = 'resposta_quiz';\n  else rota = 'outro';\n}\n\nconst lista_payload = JSON.stringify({\n  messaging_product: 'whatsapp',\n  to: dados.telefone,\n  type: 'interactive',\n  interactive: {\n    type: 'list',\n    body: { text: '🎯 *Alterar tema*\\n\\nVocê pode trocar de tema a qualquer momento. Seu progresso em cada tema fica salvo e você volta de onde parou.\\n\\nEscolha abaixo o tema que quer estudar agora:' },\n    action: {\n      button: 'Ver temas',\n      sections: [{\n        title: 'Temas disponíveis',\n        rows: [\n          { id: 'tema_egito', title: '🐪 Egito Antigo' },\n          { id: 'tema_roma', title: '🏛️ Império Romano' },\n          { id: 'tema_medieval', title: '⚔️ Idade Média' },\n          { id: 'tema_brasil_colonial', title: '🇧🇷 Brasil Colonial' },\n          { id: 'tema_segunda_guerra', title: '🪖 Segunda Guerra Mundial' }\n        ]\n      }]\n    }\n  }\n});\n// Extrair aula_id do botão de quiz se disponível\nconst quizAulaId = (buttonReplyId && buttonReplyId.startsWith('quiz_trigger_') && buttonReplyId !== 'quiz_trigger_onboarding')\n  ? buttonReplyId.replace('quiz_trigger_', '')\n  : null;\n\nreturn { json: { ...dados, rota, list_reply_id: listReplyId, lista_payload, quiz_aula_id: quizAulaId } };"
+      },
+      "id": "d28b3317-40dd-46c5-9a73-dfe8cb7b2133",
+      "name": "Rotear Mensagem do Usuário",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        362016,
+        184752
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.rota }}",
+              "rightValue": "iniciar_aula",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4ed31c14-fa46-4f88-aa67-8f1a40418925",
+      "name": "É Iniciar Aula?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        362608,
+        184592
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.rota }}",
+              "rightValue": "resposta_quiz",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9bcc1062-0d4d-41c7-a45f-14b22dadb299",
+      "name": "É Resposta Quiz?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        362608,
+        184832
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.rota }}",
+              "rightValue": "acessar_quiz",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "45b86301-f4fb-46cf-9b5f-901dee251cc9",
+      "name": "É Acessar Quiz?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        362608,
+        185024
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.rota }}",
+              "rightValue": "como_funciona",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5c647722-8f56-4956-8048-738cc8a37e87",
+      "name": "É Como Funciona?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        362608,
+        185200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.rota }}",
+              "rightValue": "mudar_horario",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "dcec9cc1-aa25-4f5b-8c89-9893408e8f07",
+      "name": "É Mudar Horário?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        362608,
+        185536
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.rota }}",
+              "rightValue": "confirmar_manha",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "cond2",
+              "leftValue": "={{ $json.rota }}",
+              "rightValue": "confirmar_almoco",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "cond3",
+              "leftValue": "={{ $json.rota }}",
+              "rightValue": "confirmar_noite",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "dc415fba-b72d-490d-a2d1-b151fe632d6f",
+      "name": "É Confirmar Horário?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        362608,
+        185856
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "aulas",
+        "returnAll": false,
+        "limit": 1,
+        "filterType": "string",
+        "filterString": "=tema=eq.{{ $('Rotear Mensagem do Usuário').first().json.tema }}&numero=eq.{{ $('Rotear Mensagem do Usuário').first().json.aula_atual + 1 }}"
+      },
+      "id": "bf05ab8b-019b-4481-8f67-a3cddbce059c",
+      "name": "Buscar Próxima Aula",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        362848,
+        184576
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aula = $input.first().json;\nconst usuario = $('Rotear Mensagem do Usuário').first().json;\nlet telefone = usuario.telefone;\nif (!telefone.startsWith('55')) telefone = '55' + telefone;\nif (!telefone.startsWith('+')) telefone = '+' + telefone;\n\nif (!aula || !aula.id) {\n  return {\n    json: {\n      telefone,\n      aula_encontrada: false,\n      usuario_id: usuario.usuario_id,\n      mensagem_conclusao: `Parabéns, ${usuario.nome}! 🥇 Você concluiu todas as 30 aulas de *${usuario.tema}* e se tornou um Expert! Escolha seu próximo tema abaixo.`\n    }\n  };\n}\n\nconst imagens = aula.imagens || [];\nreturn {\n  json: {\n    aula_encontrada: true,\n    telefone,\n    usuario_id: usuario.usuario_id,\n    aula_id: aula.id,\n    aula_numero: aula.numero,\n    audio_url: aula.audio_url || null,\n    imagem_1: imagens[0] || null,\n    imagem_2: imagens[1] || null,\n    imagem_3: imagens[2] || null,\n    mensagem_intro: aula.descricao || '',\n    quiz: aula.quiz,\n    novo_aula_atual: aula.numero,\n    quiz_payload: JSON.stringify({\n      messaging_product: 'whatsapp',\n      to: telefone,\n      type: 'interactive',\n      interactive: {\n        type: 'button',\n        body: { text: aula.quiz ? (aula.quiz.pergunta + '\\n\\nA) ' + aula.quiz.opcoes.A + '\\n\\nB) ' + aula.quiz.opcoes.B + '\\n\\nC) ' + aula.quiz.opcoes.C) : '' },\n        action: {\n          buttons: [\n            { type: 'reply', reply: { id: 'quiz_A', title: 'Opção A' } },\n            { type: 'reply', reply: { id: 'quiz_B', title: 'Opção B' } },\n            { type: 'reply', reply: { id: 'quiz_C', title: 'Opção C' } }\n          ]\n        }\n      }\n    })\n  }\n};"
+      },
+      "id": "013adf80-16b3-48b6-bddf-ff65dba045c3",
+      "name": "Formatar Aula para Envio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        363072,
+        184576
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.aula_encontrada }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "23e1251c-5372-42f0-b8fb-61a0f34b3208",
+      "name": "Aula Encontrada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        363264,
+        184576
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $('Formatar Aula para Envio').first().json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text.body",
+              "value": "={{ $('Formatar Aula para Envio').first().json.mensagem_intro }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d25ae807-4c42-49a7-bef8-4b5e4644fb73",
+      "name": "Enviar Intro da Aula",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        363520,
+        184480
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Formatar Aula para Envio').first().json.telefone }}\",\n  \"type\": \"audio\",\n  \"audio\": { \"link\": \"{{ $('Formatar Aula para Envio').first().json.audio_url }}\" }\n}",
+        "options": {}
+      },
+      "id": "f880f7ed-d01c-4f1e-9514-edb71f88fea9",
+      "name": "Enviar Áudio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        363744,
+        184480
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $('Formatar Aula para Envio').first().json.imagem_1 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "name": "filter.operator.notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "610f37a4-3603-4345-8de6-54b745233bad",
+      "name": "Tem Imagem 1?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        363952,
+        184480
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Formatar Aula para Envio').first().json.telefone }}\",\n  \"type\": \"image\",\n  \"image\": { \"link\": \"{{ $('Formatar Aula para Envio').first().json.imagem_1 }}\" }\n}",
+        "options": {}
+      },
+      "id": "c513b7f6-26db-4f53-9505-9b06cd00b2e8",
+      "name": "Enviar Imagem 1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        364272,
+        184384
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $('Formatar Aula para Envio').first().json.imagem_2 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "name": "filter.operator.notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "40428033-3ded-47b7-9cea-f5a1b72434c0",
+      "name": "Tem Imagem 2?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        364560,
+        184496
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Formatar Aula para Envio').first().json.telefone }}\",\n  \"type\": \"image\",\n  \"image\": { \"link\": \"{{ $('Formatar Aula para Envio').first().json.imagem_2 }}\" }\n}",
+        "options": {}
+      },
+      "id": "5885a859-a9af-4705-b88f-eeedd839e08d",
+      "name": "Enviar Imagem 2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        364864,
+        184400
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $('Formatar Aula para Envio').first().json.imagem_3 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "name": "filter.operator.notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bd7078c4-c5df-4ca0-9b00-ceae53e8aa76",
+      "name": "Tem Imagem 3?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        365088,
+        184512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Formatar Aula para Envio').first().json.telefone }}\",\n  \"type\": \"image\",\n  \"image\": { \"link\": \"{{ $('Formatar Aula para Envio').first().json.imagem_3 }}\" }\n}",
+        "options": {}
+      },
+      "id": "05253944-a5db-4269-ba80-abf580d4e14d",
+      "name": "Enviar Imagem 3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        365312,
+        184400
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $('Formatar Aula para Envio').first().json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "interactive"
+            },
+            {
+              "name": "interactive.type",
+              "value": "button"
+            },
+            {
+              "name": "interactive.body.text",
+              "value": "🧠 Acesse o quiz para testar seus conhecimentos e acumular medalhas!"
+            },
+            {
+              "name": "interactive.action.buttons[0].type",
+              "value": "reply"
+            },
+            {
+              "name": "interactive.action.buttons[0].reply.id",
+              "value": "={{ 'quiz_trigger_' + $('Formatar Aula para Envio').first().json.aula_id }}"
+            },
+            {
+              "name": "interactive.action.buttons[0].reply.title",
+              "value": "Acessar o Quiz"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "74690347-e08b-49d0-ad68-6bcbba764798",
+      "name": "Enviar Botao Quiz",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        365808,
+        184528
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Formatar Aula para Envio').first().json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "ativo"
+            },
+            {
+              "fieldId": "ultimo_envio_aula",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "quiz_pendente_aula_id",
+              "fieldValue": "={{ $('Formatar Aula para Envio').first().json.aula_id }}"
+            },
+            {
+              "fieldId": "aula_atual",
+              "fieldValue": "={{ $('Formatar Aula para Envio').first().json.aula_numero }}"
+            }
+          ]
+        }
+      },
+      "id": "adb028e4-1f53-4485-b966-f4768217ef07",
+      "name": "Atualizar Usuário Após Aula",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        366032,
+        184528
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "progresso_usuario",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "usuario_id",
+              "fieldValue": "={{ $('Formatar Aula para Envio').first().json.usuario_id }}"
+            },
+            {
+              "fieldId": "aula_id",
+              "fieldValue": "={{ $('Formatar Aula para Envio').first().json.aula_id }}"
+            },
+            {
+              "fieldId": "aula_enviada",
+              "fieldValue": "true"
+            },
+            {
+              "fieldId": "aula_enviada_em",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "id": "e4bb4c62-cb96-497f-8325-5c04bcddb760",
+      "name": "Criar Registro de Progresso",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        366256,
+        184528
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $('Formatar Aula para Envio').first().json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text.body",
+              "value": "={{ $('Formatar Aula para Envio').first().json.mensagem_conclusao }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4bdf8263-9f27-4aec-8e85-cbc4aeb5e54f",
+      "name": "Enviar Tema Concluído",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        363520,
+        184640
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $('Rotear Mensagem do Usuário').first().json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "interactive"
+            },
+            {
+              "name": "interactive.type",
+              "value": "button"
+            },
+            {
+              "name": "interactive.body.text",
+              "value": "={{ $('Buscar Aula Quiz Pendente').first().json.quiz.pergunta + '\\n\\nA) ' + $('Buscar Aula Quiz Pendente').first().json.quiz.opcoes.A + '\\n\\nB) ' + $('Buscar Aula Quiz Pendente').first().json.quiz.opcoes.B + '\\n\\nC) ' + $('Buscar Aula Quiz Pendente').first().json.quiz.opcoes.C }}"
+            },
+            {
+              "name": "interactive.action.buttons[0].type",
+              "value": "reply"
+            },
+            {
+              "name": "interactive.action.buttons[0].reply.id",
+              "value": "quiz_A"
+            },
+            {
+              "name": "interactive.action.buttons[0].reply.title",
+              "value": "Opção A"
+            },
+            {
+              "name": "interactive.action.buttons[1].type",
+              "value": "reply"
+            },
+            {
+              "name": "interactive.action.buttons[1].reply.id",
+              "value": "quiz_B"
+            },
+            {
+              "name": "interactive.action.buttons[1].reply.title",
+              "value": "Opção B"
+            },
+            {
+              "name": "interactive.action.buttons[2].type",
+              "value": "reply"
+            },
+            {
+              "name": "interactive.action.buttons[2].reply.id",
+              "value": "quiz_C"
+            },
+            {
+              "name": "interactive.action.buttons[2].reply.title",
+              "value": "Opção C"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bc309c8b-bafd-47f5-9fa2-cf77986f8cad",
+      "name": "Enviar Quiz Interativo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        363072,
+        185008
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "aulas",
+        "limit": 1,
+        "filterType": "string",
+        "filterString": "={{ $('Rotear Mensagem do Usuário').first().json.quiz_aula_id ? 'id=eq.' + $('Rotear Mensagem do Usuário').first().json.quiz_aula_id : 'tema=eq.' + $('Rotear Mensagem do Usuário').first().json.tema + '&numero=eq.' + $('Rotear Mensagem do Usuário').first().json.aula_atual }}"
+      },
+      "id": "34d6eedc-c12c-40c5-8b2c-282932fb12a5",
+      "name": "Buscar Aula do Quiz",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        362848,
+        184816
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aula = $input.first().json;\nconst usuario = $('Rotear Mensagem do Usuário').first().json;\nconst respostaUsuario = usuario.mensagem_original || (usuario.button_reply_id ? usuario.button_reply_id.replace('quiz_','') : '');\nlet telefone = usuario.telefone;\nif (!telefone.startsWith('55')) telefone = '55' + telefone;\nif (!telefone.startsWith('+')) telefone = '+' + telefone;\n\nif (!aula || !aula.id) {\n  return {\n    json: {\n      telefone,\n      usuario_id: usuario.usuario_id,\n      quiz_valido: false,\n      badge_mensagem: null,\n      badge_imagem_url: null,\n      mensagem_feedback: '❓ Não encontrei um quiz pendente. Envie qualquer mensagem para acessar o menu.'\n    }\n  };\n}\n\nconst quiz = aula.quiz;\nconst respostaCorreta = quiz.resposta_correta;\nconst acertou = respostaUsuario === respostaCorreta;\n// Calcular streak em UTC puro (igual ao $now.toFormat do n8n no Railway)\nconst agora = new Date();\nconst hoje = agora.toISOString().split('T')[0];\nconst ontem = new Date(agora.getTime() - 86400000).toISOString().split('T')[0];\nconst ultimaAtividade = usuario.ultima_atividade || null;\nconst streakAtual = usuario.streak_atual || 0;\nconst novoStreak = (ultimaAtividade === ontem || ultimaAtividade === hoje)\n  ? streakAtual + 1\n  : 1;\nconst aulasCompletas = usuario.aula_atual;\nconst tema = usuario.tema || usuario.tema_escolhido;\n// usuario.momento e usuario.horario_texto vêm do Extrair Status do Usuário via spread\nconst momento_dia = usuario.momento || 'Ao acordar';\nconst horario_texto = usuario.horario_texto || '6h';\n\nconst badgeUrls = {\n  'Brasil Colônia': {\n    7:  'https://res.cloudinary.com/dxq2reesi/image/upload/v1773167915/8b9d4480-fcd5-4e40-bba1-abf6befb2bcd.png',\n    14: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773168421/1654673e-5583-4c88-8602-89baf731754f.png',\n    21: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773168730/79a5f8ac-152e-4fe9-b7e1-2c5089523c71.png',\n    30: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773168841/a36786d3-dac0-4090-b895-95367770b942.png'\n  },\n  'Egito Antigo': {\n    7:  'https://res.cloudinary.com/dxq2reesi/image/upload/v1773168967/dec64efd-f9ba-4a65-b1ec-96bb016b2941.png',\n    14: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773169169/2edb9aea-8be3-481d-8384-bbf0772a9c2a.png',\n    21: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773169268/904be94a-878a-43eb-a8f9-643ecbd7a4c5.png',\n    30: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773169352/5108f9c0-1db1-4f9b-b87d-13cdb54c9494.png'\n  },\n  'Idade Média': {\n    7:  'https://res.cloudinary.com/dxq2reesi/image/upload/v1773169473/942aa950-7046-4c2b-abcc-66425a9d4755.png',\n    14: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773169595/7d996c66-0edd-4bfd-9c34-b5bf8a9de807.png',\n    21: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773171887/2f0413d1-3617-4406-b04e-8333e4d1cfe7.png',\n    30: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773172085/b9a200d7-aa1b-4ed5-b1a1-2948b759113d.png'\n  },\n  'Império Romano': {\n    7:  'https://res.cloudinary.com/dxq2reesi/image/upload/v1773172244/a92c1760-f8e1-45d1-aa1e-ff962229e323.png',\n    14: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773172351/7e46875f-df1d-4d9c-8884-0c2430a77d22.png',\n    21: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773172501/697d5dee-baa1-491b-9e98-1707e88402f4.png',\n    30: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773172597/912cfe68-b8ac-4d64-b0a8-cecd38e2c9b5.png'\n  },\n  'Segunda Guerra Mundial': {\n    7:  'https://res.cloudinary.com/dxq2reesi/image/upload/v1773172732/4c393aa4-432e-4801-a67d-0a82926bed10.png',\n    14: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773172841/733be2f5-2121-4207-929e-8f1449924e99.png',\n    21: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773172970/e4805372-d83a-4f9d-b8f4-d7f86f380060.png',\n    30: 'https://res.cloudinary.com/dxq2reesi/image/upload/v1773173072/121529cb-1dfe-4fcb-9085-0832d98fd93d.png'\n  }\n};\n\nconst badgeNomes = {\n  7: 'Aprendiz',\n  14: 'Explorador',\n  21: 'Conhecedor',\n  30: 'Expert'\n};\n\nconst badgeEmojis = {\n  7: '🥉',\n  14: '🗺️',\n  21: '🥈',\n  30: '🥇🎉'\n};\n\nlet badgeMensagem = null;\nlet badgeImagemUrl = null;\n\nif ([7, 14, 21, 30].includes(aulasCompletas)) {\n  const nome = badgeNomes[aulasCompletas];\n  const emoji = badgeEmojis[aulasCompletas];\n  badgeImagemUrl = badgeUrls[tema]?.[aulasCompletas] || null;\n\n  if (aulasCompletas === 30) {\n    badgeMensagem = `Parabéns, ${usuario.nome}! Você concluiu todas as 30 aulas de *${tema}* e se tornou um *Expert*! 🥇🎉`;\n  } else {\n    badgeMensagem = `Parabéns! Você ganhou um novo badge! ${emoji} *${nome} de ${tema}*`;\n  }\n}\n\nlet mensagemFeedback = '';\nif (acertou) {\n  mensagemFeedback = `✅ *Correto, ${usuario.nome}!*\\n\\n${quiz.explicacao}\\n\\n🔥 Streak: ${novoStreak} dia${novoStreak > 1 ? 's' : ''} seguido${novoStreak > 1 ? 's' : ''}!`;\n} else {\n  const respostaCorretaTexto = quiz.opcoes[respostaCorreta];\n  mensagemFeedback = `❌ *Não foi dessa vez, ${usuario.nome}!*\\n\\nA resposta correta era *${respostaCorreta})* — ${respostaCorretaTexto}\\n\\n${quiz.explicacao}\\n\\n🔥 Streak: ${novoStreak} dia${novoStreak > 1 ? 's' : ''} seguido${novoStreak > 1 ? 's' : ''}!`;\n}\n\nif (aulasCompletas < 30) {\n  mensagemFeedback += `\\n\\n⏰ Sua próxima aula chega *${momento_dia}* (${horario_texto}). Até lá!`;\n}\n\nreturn {\n  json: {\n    telefone,\n    usuario_id: usuario.usuario_id,\n    aula_id: aula.id,\n    quiz_valido: true,\n    acertou,\n    resposta_usuario: respostaUsuario,\n    novo_streak: novoStreak,\n    badge_mensagem: badgeMensagem,\n    badge_imagem_url: badgeImagemUrl,\n    mensagem_feedback: mensagemFeedback\n  }\n};"
+      },
+      "id": "512f520a-40f2-47df-87b9-7cb0f936b1cd",
+      "name": "Validar Resposta do Quiz",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        363072,
+        184816
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text.body",
+              "value": "={{ $json.mensagem_feedback }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3713aef9-3089-4fc5-8845-456dbe465d7d",
+      "name": "Enviar Feedback Quiz",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        363296,
+        184816
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $('Validar Resposta do Quiz').first().json.badge_mensagem }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "name": "filter.operator.notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d68da1c7-f814-494a-8cee-b50bd44b3a6f",
+      "name": "Tem Badge?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        363520,
+        184816
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Validar Resposta do Quiz').first().json.telefone }}\",\n  \"type\": \"image\",\n  \"image\": {\n    \"link\": \"{{ $('Validar Resposta do Quiz').first().json.badge_imagem_url }}\",\n    \"caption\": \"{{ $('Validar Resposta do Quiz').first().json.badge_mensagem }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "291db21c-e06f-4526-87e6-e0af0330d78a",
+      "name": "Enviar Badge",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        363968,
+        184800
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Resolver Usuario ID').first().json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "quiz_pendente_aula_id",
+              "fieldValue": "={{ null }}"
+            },
+            {
+              "fieldId": "streak_atual",
+              "fieldValue": "={{ $('Validar Resposta do Quiz').first().json.novo_streak }}"
+            },
+            {
+              "fieldId": "ultima_atividade",
+              "fieldValue": "={{ $now.toFormat('yyyy-MM-dd') }}"
+            },
+            {
+              "fieldId": "ultima_interacao_em",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "id": "e3259cb6-02d3-4f87-9461-eb98ea8624a4",
+      "name": "Atualizar Streak e Limpar Quiz",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        364272,
+        184992
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "progresso_usuario",
+        "filterType": "string",
+        "filterString": "=usuario_id=eq.{{ $('Validar Resposta do Quiz').first().json.usuario_id }}&aula_id=eq.{{ $('Validar Resposta do Quiz').first().json.aula_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "quiz_respondido",
+              "fieldValue": "true"
+            },
+            {
+              "fieldId": "resposta_usuario",
+              "fieldValue": "={{ $('Validar Resposta do Quiz').first().json.resposta_usuario }}"
+            },
+            {
+              "fieldId": "acertou",
+              "fieldValue": "={{ $('Validar Resposta do Quiz').first().json.acertou }}"
+            },
+            {
+              "fieldId": "quiz_respondido_em",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "id": "c2c94cc8-9ac9-46ec-8607-33b4a0873e89",
+      "name": "Atualizar Progresso Quiz",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        364496,
+        184992
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const usuario = $('Rotear Mensagem do Usuário').first().json;\nlet telefone = usuario.telefone;\nif (!telefone.startsWith('55')) telefone = '55' + telefone;\nif (!telefone.startsWith('+')) telefone = '+' + telefone;\nconst texto = `ℹ️ *Como funciona o Stórico*\n\nTodo dia no seu horário preferido você recebe uma aula sobre o tema escolhido.\n\n📚 A aula chega em 3 partes:\n1️⃣ Texto introdutório com contexto\n2️⃣ Áudio narrado para ouvir onde quiser\n3️⃣ Quiz rápido para fixar o conteúdo\n\n🏆 *Conquistas:*\n• Dias consecutivos → mantenha seu streak 🔥\n• Complete marcos → ganhe medalhas a cada semana completada`;\nreturn { json: { telefone, texto } };"
+      },
+      "id": "4482d421-3c2b-4729-8613-cb8b971eb5be",
+      "name": "Formatar Como Funciona",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        362848,
+        185184
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text.body",
+              "value": "={{ $json.texto }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a621fb0a-49d9-4837-93d0-a3b8185b2fbe",
+      "name": "Enviar Como Funciona",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        363072,
+        185184
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const usuario = $('Rotear Mensagem do Usuário').first().json;\nlet telefone = usuario.telefone;\nif (!telefone.startsWith('55')) telefone = '55' + telefone;\nif (!telefone.startsWith('+')) telefone = '+' + telefone;\nreturn { json: { telefone, usuario_id: usuario.usuario_id } };"
+      },
+      "id": "ae911535-271e-43d1-8148-beceaf50f193",
+      "name": "Formatar Opções de Horário",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        362848,
+        185520
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.telefone }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"button\",\n    \"body\": { \"text\": \"⏰ *Alterar horário das aulas*\\n\\nEm qual horário você prefere receber suas aulas?\" },\n    \"action\": {\n      \"buttons\": [\n        { \"type\": \"reply\", \"reply\": { \"id\": \"horario_manha\", \"title\": \"🌅 Ao acordar (6h)\" } },\n        { \"type\": \"reply\", \"reply\": { \"id\": \"horario_almoco\", \"title\": \"☀️ Almoço (12h)\" } },\n        { \"type\": \"reply\", \"reply\": { \"id\": \"horario_noite\", \"title\": \"🌙 Noite (19h)\" } }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "id": "30534e16-572e-483f-9431-64685c339b9d",
+      "name": "Enviar Opções de Horário",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        363072,
+        185520
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Formatar Opções de Horário').first().json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "acao_pendente",
+              "fieldValue": "mudando_horario"
+            }
+          ]
+        }
+      },
+      "id": "666e03de-a488-48d5-8d05-5ace87c7e9c8",
+      "name": "Salvar Ação Pendente",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        363296,
+        185520
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const usuario = $('Rotear Mensagem do Usuário').first().json;\nconst rota = usuario.rota;\nlet novoMomento = '';\nlet horarioTexto = '';\nif (rota === 'confirmar_manha') { novoMomento = 'Ao acordar'; horarioTexto = '6h'; }\nelse if (rota === 'confirmar_almoco') { novoMomento = 'Na hora do almoço'; horarioTexto = '12h'; }\nelse if (rota === 'confirmar_noite') { novoMomento = 'À noite'; horarioTexto = '19h'; }\nlet telefone = usuario.telefone;\nif (!telefone.startsWith('55')) telefone = '55' + telefone;\nif (!telefone.startsWith('+')) telefone = '+' + telefone;\nreturn {\n  json: {\n    telefone,\n    usuario_id: usuario.usuario_id,\n    novo_momento: novoMomento,\n    mensagem_confirmacao: `✅ Pronto! Suas aulas agora chegam *${novoMomento}* (${horarioTexto}).`\n  }\n};"
+      },
+      "id": "235f5b58-1bcd-448a-832f-18b8d9007fde",
+      "name": "Formatar Mudança de Horário",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        362848,
+        185856
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Formatar Mudança de Horário').first().json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "momento_dia",
+              "fieldValue": "={{ $json.novo_momento }}"
+            },
+            {
+              "fieldId": "acao_pendente",
+              "fieldValue": "={{ null }}"
+            }
+          ]
+        }
+      },
+      "id": "afb785dc-fb41-43be-9903-0a800e148e38",
+      "name": "Atualizar Horário no Banco",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        363072,
+        185856
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $('Formatar Mudança de Horário').first().json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text.body",
+              "value": "={{ $('Formatar Mudança de Horário').first().json.mensagem_confirmacao }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3a9a1310-4a09-4bd6-a5d2-0f11045f3440",
+      "name": "Enviar Confirmação de Horário",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        363296,
+        185856
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const usuario = $('Rotear Mensagem do Usuário').first().json;\nlet telefone = usuario.telefone;\nif (!telefone.startsWith('55')) telefone = '55' + telefone;\nif (!telefone.startsWith('+')) telefone = '+' + telefone;\nreturn { json: { telefone } };"
+      },
+      "id": "c478d23d-4fb3-479e-bb80-bfc0c51c8ee4",
+      "name": "Formatar Mensagem Genérica",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        362864,
+        186272
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "interactive"
+            },
+            {
+              "name": "interactive.type",
+              "value": "list"
+            },
+            {
+              "name": "interactive.body.text",
+              "value": "Escolha uma das opções disponíveis:"
+            },
+            {
+              "name": "interactive.action.button",
+              "value": "Ver opções"
+            },
+            {
+              "name": "interactive.action.sections[0].title",
+              "value": "Menu"
+            },
+            {
+              "name": "interactive.action.sections[0].rows[0].id",
+              "value": "menu_como_funciona"
+            },
+            {
+              "name": "interactive.action.sections[0].rows[0].title",
+              "value": "ℹ️ Como funciona"
+            },
+            {
+              "name": "interactive.action.sections[0].rows[1].id",
+              "value": "menu_alterar_horario"
+            },
+            {
+              "name": "interactive.action.sections[0].rows[1].title",
+              "value": "⏰ Alterar horário"
+            },
+            {
+              "name": "interactive.action.sections[0].rows[2].id",
+              "value": "menu_alterar_tema"
+            },
+            {
+              "name": "interactive.action.sections[0].rows[2].title",
+              "value": "🎯 Alterar tema"
+            },
+            {
+              "name": "interactive.action.sections[0].rows[3].id",
+              "value": "menu_suporte"
+            },
+            {
+              "name": "interactive.action.sections[0].rows[3].title",
+              "value": "🆘 Suporte"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a80df77e-352a-40d1-8193-247f7941dc1f",
+      "name": "Enviar Mensagem Genérica",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        363088,
+        186272
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "aulas",
+        "limit": 1,
+        "filterType": "string",
+        "filterString": "={{ $('Rotear Mensagem do Usuário').first().json.quiz_aula_id ? 'id=eq.' + $('Rotear Mensagem do Usuário').first().json.quiz_aula_id : 'tema=eq.' + $('Rotear Mensagem do Usuário').first().json.tema + '&numero=eq.' + $('Rotear Mensagem do Usuário').first().json.aula_atual }}"
+      },
+      "id": "158cb410-be9e-49f8-972d-7cc0af1a3783",
+      "name": "Buscar Aula Quiz Pendente",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        362848,
+        185008
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.rota }}",
+              "rightValue": "alterar_tema",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6727a3a1-e75d-4549-8bcc-80fc0de022fe",
+      "name": "É Alterar Tema?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        362608,
+        185360
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.rota }}",
+              "rightValue": "suporte",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b416f19a-91e7-4c8e-a3bf-97a5e399763b",
+      "name": "É Suporte?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        362608,
+        185696
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.rota }}",
+              "rightValue": "confirmar_tema",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6be4d07a-a3ea-46a6-9355-391c52adc848",
+      "name": "É Confirmar Tema?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        362608,
+        186032
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Rotear Mensagem do Usuário').first().json.lista_payload }}",
+        "options": {}
+      },
+      "id": "cbc9a7b5-d714-4123-bcb2-310e7440074e",
+      "name": "Enviar Lista de Temas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        362848,
+        185344
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $('Rotear Mensagem do Usuário').first().json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text.body",
+              "value": "💬 *Suporte Stórico*\n\nOlá! Para falar com nossa equipe, é só enviar um e-mail para:\n\n📧 *suporte@storico.com.br*\n\nResponderemos o mais breve possível para te ajudar! 😊"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b02cbf2f-7023-4852-951d-0996f63b32cf",
+      "name": "Enviar Mensagem Suporte",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        362848,
+        185680
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const usuario = $('Rotear Mensagem do Usuário').first().json;\nconst listReplyId = usuario.list_reply_id || '';\n\nconst temaMap = {\n  'tema_egito': 'Egito Antigo',\n  'tema_roma': 'Império Romano',\n  'tema_medieval': 'Idade Média',\n  'tema_brasil_colonial': 'Brasil Colonial',\n  'tema_segunda_guerra': 'Segunda Guerra Mundial'\n};\n\nconst novoTema = temaMap[listReplyId] || null;\n\nlet telefone = usuario.telefone;\nif (!telefone.startsWith('55')) telefone = '55' + telefone;\nif (!telefone.startsWith('+')) telefone = '+' + telefone;\n\nreturn {\n  json: {\n    telefone,\n    usuario_id: usuario.usuario_id,\n    novo_tema: novoTema,\n    nome: usuario.nome,\n    mensagem_confirmacao: `Ótima escolha! 🎯 Começaremos a jornada em *${novoTema}* amanhã, no horário de sempre.`\n  }\n};"
+      },
+      "id": "328c97b9-e517-4578-9adb-6d914cf7a454",
+      "name": "Processar Mudança de Tema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        362848,
+        186032
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Processar Mudança de Tema').first().json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "tema_escolhido",
+              "fieldValue": "={{ $('Processar Mudança de Tema').first().json.novo_tema }}"
+            },
+            {
+              "fieldId": "aula_atual",
+              "fieldValue": "={{ $('Extrair Progresso Novo Tema').first().json.aula_atual }}"
+            },
+            {
+              "fieldId": "quiz_pendente_aula_id",
+              "fieldValue": "={{ null }}"
+            }
+          ]
+        }
+      },
+      "id": "34cbf480-4d25-4b96-abb3-5ddabaa04e66",
+      "name": "Atualizar Tema no Banco",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        363296,
+        186032
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $('Processar Mudança de Tema').first().json.telefone }}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text.body",
+              "value": "={{ $('Processar Mudança de Tema').first().json.mensagem_confirmacao }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d2440cd4-81d6-4abe-b8c4-d9341f495e75",
+      "name": "Enviar Confirmação Tema",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        363296,
+        186032
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/965585489981200/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Formatar Aula para Envio').first().json.telefone }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"body\": { \"text\": \"Qual será o próximo tema da sua jornada?\" },\n    \"action\": {\n      \"button\": \"Ver temas\",\n      \"sections\": [{\n        \"title\": \"Temas disponíveis\",\n        \"rows\": [\n          { \"id\": \"tema_egito\", \"title\": \"🏺 Egito Antigo\" },\n          { \"id\": \"tema_roma\", \"title\": \"🏛️ Império Romano\" },\n          { \"id\": \"tema_medieval\", \"title\": \"⚔️ Período Medieval\" },\n          { \"id\": \"tema_brasil_colonial\", \"title\": \"🌿 Brasil Colonial\" },\n          { \"id\": \"tema_segunda_guerra\", \"title\": \"✈️ Segunda Guerra Mundial\" }\n        ]\n      }]\n    }\n  }\n}",
+        "options": {}
+      },
+      "id": "e758bc50-dcbf-475c-be19-c9ec297049b1",
+      "name": "Enviar Lista Temas Conclusão",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        363744,
+        184640
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1j0kr7upRUTxGuNL",
+          "name": "Meta Whatsapp API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9e2bd464-332b-4b46-8f8e-d3a0dbb87f3f",
+      "name": "Webhook - Verificação Meta",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        360304,
+        184336
+      ],
+      "webhookId": "whatsapp"
+    },
+    {
+      "parameters": {
+        "jsCode": "const query = $input.first().json.query;\nconst mode = query['hub.mode'];\nconst token = query['hub.verify_token'];\nconst challenge = query['hub.challenge'];\n\nif (mode === 'subscribe' && token === 'storico_webhook_2026') {\n  return { json: { challenge } };\n}\nreturn { json: { challenge: null } };"
+      },
+      "id": "591b91b0-e534-4017-9e1f-03e0edc32735",
+      "name": "Verificar Challenge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360512,
+        184336
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.challenge }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "9dfc3b94-005c-4946-a13b-72b9eead60b2",
+      "name": "Responder Challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        360720,
+        184336
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "id": "528bbeb6-0852-44d0-ba22-628b4932fb74",
+      "name": "Wait Após Intro",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        363632,
+        184480
+      ],
+      "webhookId": "a1cafca7-7a37-4990-9d16-cf127eb160ed"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "8c280a59-7bb6-494c-b727-29db07a4cc3d",
+      "name": "Wait Após Áudio",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        363856,
+        184480
+      ],
+      "webhookId": "78c9f4d8-97d0-468f-8bff-a9b71f49304d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get usuario_id from the most reliable available source\nlet usuario_id = null;\n\n// Try Validar Resposta do Quiz first (always runs in quiz flow)\ntry {\n  usuario_id = $('Validar Resposta do Quiz').first().json.usuario_id;\n} catch(e) {}\n\n// Fallback to Buscar Usuário no Supabase\nif (!usuario_id) {\n  try {\n    usuario_id = $('Buscar Usuário no Supabase').first().json.id;\n  } catch(e) {}\n}\n\n// Fallback to Rotear Mensagem do Usuário\nif (!usuario_id) {\n  try {\n    usuario_id = $('Rotear Mensagem do Usuário').first().json.usuario_id;\n  } catch(e) {}\n}\n\nreturn { json: { usuario_id } };"
+      },
+      "id": "c42bee25-168c-4dc1-b7f0-82cf1b9e5cfe",
+      "name": "Resolver Usuario ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        364032,
+        184992
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "9360a4e8-a2a5-4b1d-923c-b403cf9c443c",
+      "name": "Wait Antes do Quiz",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        365568,
+        184464
+      ],
+      "webhookId": "61a125ce-a7c3-4585-89ad-e2bdcc59e538"
+    },
+    {
+      "parameters": {
+        "unit": "seconds"
+      },
+      "id": "a270065a-3d52-4eb2-bd4c-5468f55665b3",
+      "name": "Wait Após Imagem 1",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        364480,
+        184384
+      ],
+      "webhookId": "a8f0937b-825f-439c-ab81-aad01d3478f4"
+    },
+    {
+      "parameters": {
+        "unit": "seconds"
+      },
+      "id": "72fc8a39-0363-48aa-88f0-d32645e236d8",
+      "name": "Wait Após Imagem 2",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        365072,
+        184400
+      ],
+      "webhookId": "a1752082-451c-4267-afc0-864c1680b4d2"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "ultima_interacao_em",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "id": "83f51f3b-4550-4699-9d41-fb71491894c7",
+      "name": "Atualizar Última Interação",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        361712,
+        184384
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Extrair Status do Usuário').first().json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "quiz_pendente_aula_id",
+              "fieldValue": "={{ null }}"
+            },
+            {
+              "fieldId": "ultima_interacao_em",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "id": "b3b2f7da-5905-4311-ac82-8f6286525ef4",
+      "name": "Limpar Quiz Pendente",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        363280,
+        185008
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "options": {},
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "r1",
+                    "leftValue": "={{ $('Rotear Mensagem do Usuário').first().json.tema }}",
+                    "rightValue": "Egito Antigo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": false
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "r2",
+                    "leftValue": "={{ $('Rotear Mensagem do Usuário').first().json.tema }}",
+                    "rightValue": "Império Romano",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": false
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "r3",
+                    "leftValue": "={{ $('Rotear Mensagem do Usuário').first().json.tema }}",
+                    "rightValue": "Idade Média",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": false
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "r4",
+                    "leftValue": "={{ $('Rotear Mensagem do Usuário').first().json.tema }}",
+                    "rightValue": "Brasil Colonial",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": false
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "r5",
+                    "leftValue": "={{ $('Rotear Mensagem do Usuário').first().json.tema }}",
+                    "rightValue": "Brasil Colônia",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": false
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "r6",
+                    "leftValue": "={{ $('Rotear Mensagem do Usuário').first().json.tema }}",
+                    "rightValue": "Segunda Guerra Mundial",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": false
+            }
+          ]
+        }
+      },
+      "id": "5d996c4a-efc2-449e-8bd8-a97608b48182",
+      "name": "Salvar Progresso Tema Anterior",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        362960,
+        186032
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Processar Mudança de Tema').first().json.usuario_id }}"
+      },
+      "id": "b04af00b-becb-432d-9ad9-fb24da805747",
+      "name": "Buscar Progresso Novo Tema",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        363184,
+        186032
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.origem_interna }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "É Origem Interna?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        361604,
+        184384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Processar Mudança de Tema').first().json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "progresso_egito",
+              "fieldValue": "={{ $('Rotear Mensagem do Usuário').first().json.aula_atual || 0 }}"
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3a4-b5c6-7890-def0-111111111111",
+      "name": "Salvar Progresso Egito",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        363140,
+        186032
+      ],
+      "continueOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Processar Mudança de Tema').first().json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "progresso_roma",
+              "fieldValue": "={{ $('Rotear Mensagem do Usuário').first().json.aula_atual || 0 }}"
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3a4-b5c6-7890-def0-222222222222",
+      "name": "Salvar Progresso Roma",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        363140,
+        186112
+      ],
+      "continueOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Processar Mudança de Tema').first().json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "progresso_medieval",
+              "fieldValue": "={{ $('Rotear Mensagem do Usuário').first().json.aula_atual || 0 }}"
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3a4-b5c6-7890-def0-333333333333",
+      "name": "Salvar Progresso Medieval",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        363140,
+        186192
+      ],
+      "continueOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Processar Mudança de Tema').first().json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "progresso_brasil_colonial",
+              "fieldValue": "={{ $('Rotear Mensagem do Usuário').first().json.aula_atual || 0 }}"
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3a4-b5c6-7890-def0-444444444444",
+      "name": "Salvar Progresso Brasil Colonial",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        363140,
+        186272
+      ],
+      "continueOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Processar Mudança de Tema').first().json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "progresso_brasil_colonial",
+              "fieldValue": "={{ $('Rotear Mensagem do Usuário').first().json.aula_atual || 0 }}"
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3a4-b5c6-7890-def0-555555555555",
+      "name": "Salvar Progresso Brasil Colonial2",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        363140,
+        186272
+      ],
+      "continueOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "usuarios",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Processar Mudança de Tema').first().json.usuario_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "progresso_segunda_guerra",
+              "fieldValue": "={{ $('Rotear Mensagem do Usuário').first().json.aula_atual || 0 }}"
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3a4-b5c6-7890-def0-666666666666",
+      "name": "Salvar Progresso Segunda Guerra",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        363140,
+        186352
+      ],
+      "continueOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "5HMbcTl41twjOikL",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const usuario = $input.first().json;\nconst novoTema = $('Processar Mudança de Tema').first().json.novo_tema;\n\nconst temaColMap = {\n  'Egito Antigo': 'progresso_egito',\n  'Império Romano': 'progresso_roma',\n  'Idade Média': 'progresso_medieval',\n  'Brasil Colonial': 'progresso_brasil_colonial',\n  'Brasil Colônia': 'progresso_brasil_colonial',\n  'Segunda Guerra Mundial': 'progresso_segunda_guerra',\n  'Grécia Antiga': 'progresso_grecia',\n  'Revolução Francesa': 'progresso_revolucao_francesa'\n};\n\nconst coluna = temaColMap[novoTema] || null;\nconst aulaRetomada = coluna ? (usuario[coluna] || 0) : 0;\n\nreturn {\n  json: {\n    aula_atual: aulaRetomada,\n    quiz_pendente_aula_id: null\n  }\n};"
+      },
+      "id": "e4f5a6b7-c8d9-0123-efab-234567890123",
+      "name": "Extrair Progresso Novo Tema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        363340,
+        186032
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Mensagem Recebida": {
+      "main": [
+        [
+          {
+            "node": "Resposta Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extrair Dados da Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Dados da Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Ignorar Mensagem?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ignorar Mensagem?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Buscar Usuário no Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Usuário no Supabase": {
+      "main": [
+        [
+          {
+            "node": "Usuário Existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Usuário Existe?": {
+      "main": [
+        [
+          {
+            "node": "Extrair Status do Usuário",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Formatar Mensagem - Desconhecido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Status do Usuário": {
+      "main": [
+        [
+          {
+            "node": "É Origem Interna?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Primeira Mensagem?": {
+      "main": [
+        [
+          {
+            "node": "Formatar Boas-vindas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É Trial Expirado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Trial Expirado?": {
+      "main": [
+        [
+          {
+            "node": "Formatar Mensagem Trial Expirado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rotear Mensagem do Usuário",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Mensagem Trial Expirado": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mensagem Trial Expirado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Mensagem Trial Expirado": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mensagem Trial Expirado Anual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Boas-vindas": {
+      "main": [
+        [
+          {
+            "node": "Boas-vindas Msg 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Boas-vindas Msg 1": {
+      "main": [
+        [
+          {
+            "node": "Boas-vindas Msg 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Boas-vindas Msg 2": {
+      "main": [
+        [
+          {
+            "node": "Boas-vindas Msg 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Boas-vindas Msg 3": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Status para Ativo Onboarding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Mensagem - Desconhecido": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mensagem Desconhecido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rotear Mensagem do Usuário": {
+      "main": [
+        [
+          {
+            "node": "É Iniciar Aula?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Iniciar Aula?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Próxima Aula",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É Resposta Quiz?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Resposta Quiz?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Aula do Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É Acessar Quiz?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Acessar Quiz?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Aula Quiz Pendente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É Como Funciona?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Como Funciona?": {
+      "main": [
+        [
+          {
+            "node": "Formatar Como Funciona",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É Mudar Horário?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Mudar Horário?": {
+      "main": [
+        [
+          {
+            "node": "Formatar Opções de Horário",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É Alterar Tema?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Confirmar Horário?": {
+      "main": [
+        [
+          {
+            "node": "Formatar Mudança de Horário",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É Confirmar Tema?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Próxima Aula": {
+      "main": [
+        [
+          {
+            "node": "Formatar Aula para Envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Aula para Envio": {
+      "main": [
+        [
+          {
+            "node": "Aula Encontrada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aula Encontrada?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Intro da Aula",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Tema Concluído",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Intro da Aula": {
+      "main": [
+        [
+          {
+            "node": "Wait Após Intro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Áudio": {
+      "main": [
+        [
+          {
+            "node": "Wait Após Áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Imagem 1?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Imagem 1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tem Imagem 2?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Imagem 1": {
+      "main": [
+        [
+          {
+            "node": "Wait Após Imagem 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Imagem 2?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Imagem 2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tem Imagem 3?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Imagem 2": {
+      "main": [
+        [
+          {
+            "node": "Wait Após Imagem 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Imagem 3?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Imagem 3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Botao Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Imagem 3": {
+      "main": [
+        [
+          {
+            "node": "Wait Antes do Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Botao Quiz": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Usuário Após Aula",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Usuário Após Aula": {
+      "main": [
+        [
+          {
+            "node": "Criar Registro de Progresso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Aula Quiz Pendente": {
+      "main": [
+        [
+          {
+            "node": "Enviar Quiz Interativo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Aula do Quiz": {
+      "main": [
+        [
+          {
+            "node": "Validar Resposta do Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Resposta do Quiz": {
+      "main": [
+        [
+          {
+            "node": "Enviar Feedback Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Feedback Quiz": {
+      "main": [
+        [
+          {
+            "node": "Tem Badge?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Badge?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Badge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Resolver Usuario ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Badge": {
+      "main": [
+        [
+          {
+            "node": "Resolver Usuario ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Streak e Limpar Quiz": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Progresso Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Como Funciona": {
+      "main": [
+        [
+          {
+            "node": "Enviar Como Funciona",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Opções de Horário": {
+      "main": [
+        [
+          {
+            "node": "Enviar Opções de Horário",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Opções de Horário": {
+      "main": [
+        [
+          {
+            "node": "Salvar Ação Pendente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Mudança de Horário": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Horário no Banco",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Horário no Banco": {
+      "main": [
+        [
+          {
+            "node": "Enviar Confirmação de Horário",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Mensagem Genérica": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mensagem Genérica",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Alterar Tema?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Lista de Temas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É Suporte?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Suporte?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mensagem Suporte",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "É Confirmar Horário?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Confirmar Tema?": {
+      "main": [
+        [
+          {
+            "node": "Processar Mudança de Tema",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Formatar Mensagem Genérica",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar Mudança de Tema": {
+      "main": [
+        [
+          {
+            "node": "Salvar Progresso Tema Anterior",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Tema no Banco": {
+      "main": [
+        [
+          {
+            "node": "Enviar Confirmação Tema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Tema Concluído": {
+      "main": [
+        [
+          {
+            "node": "Enviar Lista Temas Conclusão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Verificação Meta": {
+      "main": [
+        [
+          {
+            "node": "Verificar Challenge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Challenge": {
+      "main": [
+        [
+          {
+            "node": "Responder Challenge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Após Intro": {
+      "main": [
+        [
+          {
+            "node": "Enviar Áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Após Áudio": {
+      "main": [
+        [
+          {
+            "node": "Tem Imagem 1?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolver Usuario ID": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Streak e Limpar Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Antes do Quiz": {
+      "main": [
+        [
+          {
+            "node": "Enviar Botao Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Após Imagem 1": {
+      "main": [
+        [
+          {
+            "node": "Tem Imagem 2?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Após Imagem 2": {
+      "main": [
+        [
+          {
+            "node": "Tem Imagem 3?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Quiz Interativo": {
+      "main": [
+        [
+          {
+            "node": "Limpar Quiz Pendente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Progresso Tema Anterior": {
+      "main": [
+        [
+          {
+            "node": "Salvar Progresso Egito",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Salvar Progresso Roma",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Salvar Progresso Medieval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Salvar Progresso Brasil Colonial",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Salvar Progresso Brasil Colonial2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Salvar Progresso Segunda Guerra",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Progresso Novo Tema": {
+      "main": [
+        [
+          {
+            "node": "Extrair Progresso Novo Tema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Última Interação": {
+      "main": [
+        [
+          {
+            "node": "É Primeira Mensagem?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Origem Interna?": {
+      "main": [
+        [
+          {
+            "node": "É Primeira Mensagem?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Atualizar Última Interação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Progresso Egito": {
+      "main": [
+        [
+          {
+            "node": "Buscar Progresso Novo Tema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Progresso Roma": {
+      "main": [
+        [
+          {
+            "node": "Buscar Progresso Novo Tema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Progresso Medieval": {
+      "main": [
+        [
+          {
+            "node": "Buscar Progresso Novo Tema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Progresso Brasil Colonial": {
+      "main": [
+        [
+          {
+            "node": "Buscar Progresso Novo Tema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Progresso Brasil Colonial2": {
+      "main": [
+        [
+          {
+            "node": "Buscar Progresso Novo Tema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Progresso Segunda Guerra": {
+      "main": [
+        [
+          {
+            "node": "Buscar Progresso Novo Tema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Progresso Novo Tema": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Tema no Banco",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "24b69ea0-e9fe-4a81-80d9-2bd27033f9df",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "90b59328fc71d09687ca31a43d6e8fe577622a6fad15cedf8dc1594e079011f5"
+  },
+  "id": "1HBDD8TOd1XOk8pv",
+  "tags": []
+}
